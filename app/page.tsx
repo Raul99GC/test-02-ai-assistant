@@ -1,10 +1,9 @@
+import { ChatWidget } from "@/components/chat/ChatWidget";
+
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="text-4xl font-bold">Test 02 — AI Assistant</h1>
-      <p className="mt-4 text-lg text-zinc-500">
-        Starter listo. Empieza a construir tu app.
-      </p>
+    <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-pink-50 to-orange-50 px-4 py-10 dark:from-slate-950 dark:to-slate-900">
+      <ChatWidget />
     </main>
   );
 }
