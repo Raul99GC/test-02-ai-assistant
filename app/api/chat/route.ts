@@ -9,6 +9,7 @@ import {
 import { z } from "zod";
 import { checkContentSafety } from "@/lib/content-safety";
 import { MEDICAL_MENTOR_PROMPT } from "@/lib/prompts/mentor";
+import { MessagePart } from "@/lib/types";
 
 const openrouter = createOpenRouter({
 	apiKey: process.env.OPENROUTER_API_KEY,
@@ -61,8 +62,8 @@ export async function POST(req: Request) {
 	const lastUserMessage = messages.filter((m) => m.role === "user").at(-1);
 	const lastUserText =
 		lastUserMessage?.parts
-			?.filter((p: any) => p.type === "text")
-			.map((p: any) => p.text)
+			?.filter((p: MessagePart) => p.type === "text")
+			.map((p: MessagePart) => p.text)
 			.join(" ") ??
 		lastUserMessage?.content ??
 		"";
