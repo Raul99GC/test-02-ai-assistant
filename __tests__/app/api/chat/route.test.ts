@@ -374,9 +374,40 @@ describe("POST /api/chat", () => {
         messages: [{ role: "user", content: "algo" }],
       });
 
-      await expect(POST(req)).rejects.toThrow(
-        "fallo del servicio de seguridad"
+      const response = await POST(req);
+      const json = await response.json();
+
+      expect(response.status).toBe(500);
+      expect(json.error).toBeDefined();
+    });
+
+     it("does not call convertToModelMessages when checkContentSafety rejects", async () => {
+      mockedCheckContentSafety.mockRejectedValue(
+        new Error("fallo del servicio de seguridad")
       );
+
+      const req = buildRequest({
+        messages: [{ role: "user", content: "algo" }],
+      });
+
+      await POST(req);
+
+      expect(mockConvertToModelMessages).not.toHaveBeenCalled();
+      expect(mockStreamText).not.toHaveBeenCalled();
+    });
+
+    it("does not call streamText when checkContentSafety rejects", async () => {
+      mockedCheckContentSafety.mockRejectedValue(
+        new Error("timeout de red")
+      );
+
+      const req = buildRequest({
+        messages: [{ role: "user", content: "algo" }],
+      });
+
+      await POST(req);
+
+      expect(mockStreamText).not.toHaveBeenCalled();
     });
     
   });
