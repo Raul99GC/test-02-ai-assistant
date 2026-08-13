@@ -1,232 +1,151 @@
-# Test 02 — AI Assistant
+# Ritmi — Mentor médico con IA
 
-**Chat con streaming integrado en Next.js**
+## ¿Qué construí?
 
-| Stack | |
-|---|---|
-| Next.js 16 | App Router |
-| TypeScript | Tailwind CSS |
-| Vercel AI SDK | Anthropic API |
-| Streaming SSE | ESLint |
+Construí **Ritmi**, un asistente de IA orientado a funcionar como un **mentor médico para dudas comunes de salud**.
 
----
+La idea principal del proyecto no es sustituir a un médico ni realizar diagnósticos, sino ofrecer una primera orientación útil y estructurada para preguntas relacionadas con síntomas comunes, manteniendo límites claros de seguridad.
 
-## Contexto del reto
+Para esto separé el flujo en dos responsabilidades principales:
 
-Construye un **asistente de IA especializado**. Puedes elegir el dominio: soporte técnico, recetas, coach de fitness, asistente legal básico, lo que prefieras. Lo importante es que el asistente tenga una **identidad clara** definida por un system prompt que tú diseñes.
+- Un **guardrail de seguridad**, encargado de revisar las solicitudes y detectar situaciones que no deberían ser atendidas de forma normal por el asistente.
+- Un **mentor médico**, encargado de responder las consultas permitidas siguiendo las restricciones definidas en el system prompt.
 
+Además, el asistente cuenta con tools para resolver tareas concretas, como el cálculo de **IMC**, el cálculo de **dosis** y la consulta de información en **PubMed**.
 
+Elegí este dominio porque me permitía trabajar un caso donde la calidad de las respuestas no depende únicamente del modelo, sino también de cómo se diseñan las restricciones, la validación y las herramientas alrededor del modelo.
 
-| Plazo | Trabajo estimado | Puntos totales |
-|---|---|---|
-| 3 días | 3–5 horas | 100 |
+## Cómo correrlo
 
----
-
-## Requerimientos base (obligatorios)
-
-- [ ] **Interfaz de chat** con input, botón de envío y área de mensajes con scroll automático
-- [ ] **Streaming de respuestas** — el texto debe aparecer token a token, no de golpe
-- [ ] **Historial de conversación** — el modelo debe recordar mensajes anteriores dentro de la sesión
-- [ ] **System prompt configurable** que defina la personalidad y restricciones del asistente
-- [ ] **Manejo de errores visible** — si la API falla, el usuario debe saberlo con un mensaje claro
-- [ ] **Botón para limpiar / reiniciar** la conversación
-- [ ] **README** explicando: el dominio elegido, por qué, y el diseño del system prompt
-
----
-
-## Extras para ir más allá (opcionales)
-
-- [ ] Indicador de escritura ("Claude está pensando...") durante la respuesta
-- [ ] Múltiples modos o personalidades seleccionables en la UI
-- [ ] Contador de tokens o costo estimado visible en la UI
-- [ ] Botón para copiar la respuesta del asistente
-- [ ] Persistir el historial en `localStorage` para que sobreviva un refresh
-- [ ] Tool calling / function calling — darle al asistente acceso a una herramienta simple (ej. consultar el clima, hacer un cálculo)
-- [ ] Rate limiting en el API route para prevenir abuso
-- [ ] Deploy en Vercel con URL pública
-
----
-
-## Criterios de evaluación específicos
-
-- Implementación de **streaming** (SSE / ReadableStream)
-- Diseño y calidad del **system prompt**
-- Manejo de la **API key** (nunca expuesta al cliente)
-- Manejo del **contexto de conversación** (messages array)
-- **Error handling** para fallos de API y timeouts
-
----
-
-## Rúbrica de evaluación — 100 puntos
-
-### 1. Funcionalidad (30 pts)
-
-| Criterio | Puntos |
-|---|---|
-| El proyecto corre sin errores desde el primer intento | 12 |
-| Todos los requerimientos base implementados | 10 |
-| Edge cases manejados (inputs vacíos, errores de red) | 8 |
-
-### 2. Calidad de código (25 pts)
-
-| Criterio | Puntos |
-|---|---|
-| Estructura de carpetas y archivos clara | 7 |
-| Componentes reutilizables, sin duplicación innecesaria | 7 |
-| TypeScript correctamente tipado (sin `any` sin justificar) | 6 |
-| Nombres de variables, funciones y componentes descriptivos | 5 |
-
-### 3. Decisiones técnicas y README (20 pts)
-
-| Criterio | Puntos |
-|---|---|
-| README completo con instrucciones y `.env.example` | 7 |
-| Trade-offs explicados con criterio | 7 |
-| "Qué haría con más tiempo" — honesto y con visión | 6 |
-
-### 4. UX y UI (15 pts)
-
-| Criterio | Puntos |
-|---|---|
-| La app es usable sin instrucciones previas | 6 |
-| Loading y error states visibles y útiles | 5 |
-| Diseño visual coherente (no necesita ser elaborado) | 4 |
-
-### 5. Extras (10 pts)
-
-| Criterio | Puntos |
-|---|---|
-| Features opcionales implementados y funcionales | 5 |
-| Tests (unit o integration) | 3 |
-| Deploy público funcionando | 2 |
-
-> **Rechazo inmediato:** el proyecto no corre, dependencias rotas, no hay README, o el candidato no puede explicar su propio código en la revisión técnica.
-
----
-
-## Cómo empezar
+1. Instalar las dependencias:
 
 ```bash
-# 1. Instalar dependencias
 npm install
+```
 
-# 2. Configurar variables de entorno
+2. Crear el archivo de variables de entorno:
+
+```bash
 cp .env.example .env.local
-# Edita .env.local y agrega tu ANTHROPIC_API_KEY
+```
 
-# 3. Levantar el servidor de desarrollo
+3. Configurar las variables descritas en la sección de variables de entorno.
+
+4. Levantar el servidor de desarrollo:
+
+```bash
 npm run dev
 ```
 
-Abre [http://localhost:3000](http://localhost:3000) en tu navegador.
+5. Abrir la aplicación en:
 
----
+```text
+http://localhost:3000
+```
 
 ## Variables de entorno
+
+El proyecto utiliza variables de entorno para mantener las credenciales y la configuración de los modelos fuera del código del cliente.
 
 | Variable | Descripción |
 |---|---|
-| `ANTHROPIC_API_KEY` | Tu API key de Anthropic. Obtenla en [console.anthropic.com](https://console.anthropic.com/) |
+| `OPENROUTER_API_KEY` | API key utilizada para acceder a los modelos mediante OpenRouter. |
+| `OPENROUTER_MODEL_NAME` | Nombre del modelo utilizado por el mentor. |
+| `OPENROUTER_SAFETY_MODEL_NAME` | Nombre del modelo utilizado para la capa de seguridad / guardrail. |
+| `NCBI_API_KEY` | Variable opcional para utilizar las funcionalidades relacionadas con NCBI/PubMed cuando corresponda. |
 
-Copia `.env.example` a `.env.local` y reemplaza el valor.
+La API key de OpenRouter se mantiene del lado del servidor y no se expone al cliente.
 
----
-
-## Estructura del proyecto
-
-```
-test-02-ai-assistant/
-├── app/
-│   ├── api/
-│   │   └── chat/
-│   │       └── route.ts    # API route con esqueleto del handler (empieza aquí)
-│   ├── layout.tsx           # Layout raíz
-│   ├── page.tsx             # Página principal
-│   └── globals.css          # Estilos globales con Tailwind
-├── components/              # Tus componentes van aquí
-├── lib/
-│   └── types.ts             # Tus tipos van aquí
-└── public/                  # Assets estáticos
-```
-
-El archivo `app/api/chat/route.ts` ya tiene los imports del Vercel AI SDK y el esqueleto de la función `POST`. Solo necesitas descomentarlo y completarlo.
-
-### Paquetes ya instalados
-
-- **`ai`** — Vercel AI SDK para streaming y hooks del lado del cliente (`useChat`)
-- **`@ai-sdk/anthropic`** — Provider de Anthropic para el AI SDK
-
-### Recursos útiles
-
-- [Vercel AI SDK — Documentación](https://sdk.vercel.ai/docs)
-- [Vercel AI SDK — `useChat` hook](https://sdk.vercel.ai/docs/reference/ai-sdk-ui/use-chat)
-- [Vercel AI SDK — `streamText`](https://sdk.vercel.ai/docs/reference/ai-sdk-core/stream-text)
-- [Anthropic — Modelos disponibles](https://docs.anthropic.com/en/docs/about-claude/models)
-
----
-
-## Reglas generales
-
-### Lo que sí puedes usar
-
-- Cualquier herramienta de IA: Cursor, Claude Code, GitHub Copilot, ChatGPT — sin restricciones
-- Cualquier librería de npm que consideres apropiada
-- Documentación oficial, Stack Overflow, blogs técnicos
-- Tutoriales y referencias en línea
-
-### Lo que no puedes hacer
-
-- Entregar código de un tercero sin entenderlo — se evaluará en la revisión técnica
-- Clonar un proyecto existente que resuelva exactamente el mismo problema
-- No documentar nada — el README es obligatorio
-
-> Usas IA, está bien. Lo que evaluamos es si entiendes lo que construiste, por qué tomaste cada decisión y cómo lo extenderías. La revisión técnica post-entrega es donde eso sale a la luz.
-
----
-
-## Instrucciones de entrega
-
-1. Crea un **repositorio público en GitHub** y envía el link antes de que venzan los 3 días
-2. El proyecto debe correr con `npm install` y `npm run dev` sin pasos adicionales no documentados
-3. Las variables de entorno deben estar documentadas en un archivo `.env.example`
-4. El README debe incluir: qué construiste, cómo correrlo, decisiones técnicas tomadas, qué harías con más tiempo
-5. Si hiciste deploy, incluye la URL en el README
-
----
-
-## Estructura esperada de tu README
-
-```markdown
-## ¿Qué construí?
-Descripción breve del proyecto, el dominio elegido y por qué.
-
-## Cómo correrlo
-Pasos concretos desde cero.
-
-## Variables de entorno
-Lista y descripción de cada variable en .env.example.
+> Nota: `OPENROUTER_SAFETY_MODEL_NAME` y `NCBI_API_KEY` deben estar documentadas también en el `.env.example` del proyecto para que el archivo represente todas las variables que utiliza actualmente la aplicación.
 
 ## Diseño del system prompt
-Explica la personalidad, restricciones y decisiones detrás de tu system prompt.
+
+El system prompt define la identidad del asistente como un **mentor médico**, no como un médico que pueda sustituir una valoración profesional.
+
+La personalidad está orientada a ser clara, útil y prudente. La respuesta debe intentar explicar el contexto de una duda de salud de forma comprensible, evitando presentar una conclusión como diagnóstico definitivo cuando la información disponible no lo permite.
+
+Las restricciones de seguridad son especialmente importantes en este proyecto. Por eso el flujo cuenta con un guardrail separado del mentor: antes de permitir que la solicitud llegue al flujo normal de respuesta, se revisa si el contenido debe ser rechazado, redirigido o tratado con mayor cautela.
+
+También se definieron reglas para que las herramientas se utilicen en los casos para los que fueron creadas. Por ejemplo, el cálculo de IMC, el cálculo de dosis y las consultas a PubMed se resuelven mediante tools específicas en lugar de depender únicamente de una respuesta libre del modelo.
+
+La separación entre **seguridad** y **respuesta** fue una decisión importante: permite modificar o reforzar las reglas del guardrail sin tener que convertir todo el comportamiento del mentor en una única instrucción enorme.
 
 ## Decisiones técnicas
-¿Por qué elegiste X librería sobre Y? ¿Qué trade-offs hiciste?
+
+### Next.js + Vercel AI SDK + OpenRouter
+
+Elegí Next.js como base de la aplicación porque permite mantener en el mismo proyecto la interfaz y las rutas del servidor necesarias para interactuar con los modelos.
+
+El **Vercel AI SDK** se utilizó para manejar la comunicación con el modelo y el streaming de respuestas. Una de las razones para apoyarme en esta librería fue que no tenía experiencia previa profunda con ella, pero el reto pedía una integración de IA real y el SDK proporciona las abstracciones necesarias para trabajar con el flujo de chat y el streaming sin tener que construir toda esa capa desde cero.
+
+Para los modelos utilicé **OpenRouter**, principalmente porque permite desacoplar la aplicación de un proveedor/modelo concreto y configurar los modelos mediante variables de entorno.
+
+### Guardrail separado del mentor
+
+Una de las decisiones principales fue no depender únicamente de un system prompt para resolver la seguridad.
+
+Separé el **guardrail** del **mentor** para poder razonar sobre la seguridad como una responsabilidad independiente. Esto también permite probar la lógica de moderación de forma aislada y evitar que toda la seguridad dependa de que el segundo modelo interprete correctamente todas las instrucciones.
+
+### Tools y validación con Zod
+
+Las funcionalidades específicas se implementaron como tools para que el modelo pueda delegar determinadas tareas a lógica controlada por la aplicación.
+
+Entre ellas se encuentran el cálculo de IMC, el cálculo de dosis y la consulta de información en PubMed.
+
+Para validar los datos utilizados por estas funcionalidades utilicé **Zod**, de modo que las entradas y salidas tengan una estructura definida y sea más fácil detectar datos inválidos antes de continuar con el flujo.
+
+### Persistencia y experiencia de usuario
+
+Para conservar el historial de conversación después de un refresh utilicé `localStorage`. Para este reto me pareció una solución adecuada porque permite persistir la sesión sin introducir una base de datos ni una infraestructura adicional.
+
+También implementé el **scroll automático** del chat para que la conversación permanezca posicionada en los mensajes más recientes mientras llegan las respuestas por streaming.
+
+### Pruebas: TDD y pruebas unitarias
+
+Durante el desarrollo combiné **TDD** y pruebas unitarias dependiendo de la tarea que estuviera resolviendo.
+
+En partes puntuales del proyecto, especialmente en la lógica del **guardrail**, utilicé un enfoque de TDD: primero definía mediante pruebas qué comportamiento quería que se cumpliera y después implementaba la lógica necesaria para pasar esos casos.
+
+En otras partes utilicé pruebas unitarias de forma más tradicional. La elección dependía de la naturaleza de la tarea y de qué resultaba más útil validar primero.
+
+También agregué pruebas para el guardrail y para el endpoint del chat con el objetivo de poder validar la lógica de moderación y el flujo del endpoint de forma aislada, sin depender exclusivamente de que el modelo del mentor respondiera de una determinada manera.
+
+### Uso de IA durante el desarrollo
+
+Utilicé inteligencia artificial como herramienta de apoyo durante prácticamente todo el proceso de aprendizaje e implementación, pero no como un sustituto de entender el código.
+
+Una de las principales formas en las que la utilicé fue para **consultar documentación**. Cuando no conocía una tecnología o una API, utilizaba IA para entender la documentación, revisar ejemplos y aterrizar cómo podía incorporarla al proyecto.
+
+También utilicé **DeepWiki** para explorar repositorios de GitHub y obtener documentación navegable sobre determinadas tecnologías y librerías.
+
+Hubo funcionalidades concretas donde necesitaba investigar cómo se implementaban, por ejemplo `localStorage`, el scroll automático del chat o determinadas partes del Vercel AI SDK. En esos casos utilizaba IA para revisar la documentación y entender la solución antes de integrarla con mis propios archivos y estructura.
+
+Con el Vercel AI SDK esto fue especialmente importante porque inicialmente no tenía experiencia con la librería. La IA me ayudó a entender su funcionamiento y a implementar las funcionalidades necesarias, pero el proceso consistía en revisar lo que generaba, entender por qué funcionaba y después adaptarlo al código que ya existía en el proyecto.
+
+En otras palabras, no trabajé bajo un esquema de simplemente **copiar y pegar**. Utilicé la IA para investigar, proponer soluciones y acelerar la implementación, mientras yo evaluaba qué partes tenían sentido, cómo encajaban con la arquitectura existente y qué cambios necesitaba hacer.
+
+### Uso de IA para las pruebas
+
+También utilicé IA como apoyo específicamente para testing.
+
+Primero definía las pruebas que consideraba obligatorias, es decir, los comportamientos que quería comprobar sí o sí. Después le pedía a la IA que me ayudara a generar esos tests.
+
+Una vez cubiertos esos casos, también le pedía que propusiera **casos adicionales, escenarios, mocks o edge cases** que pudiera estar pasando por alto. Esas sugerencias no se incorporaban automáticamente: las revisaba y decidía cuáles eran relevantes para el proyecto y cuáles no.
+
+De esta forma, la IA funcionó como una segunda perspectiva para ampliar la cobertura de las pruebas, mientras que la decisión final sobre qué debía probar el proyecto seguía siendo mía.
 
 ## Qué haría con más tiempo
-Sé honesto. Esto nos importa tanto como lo que sí entregaste.
-```
 
----
+Todavía quedan algunas mejoras que me gustaría implementar en una siguiente iteración.
 
-## La revisión técnica post-entrega
+La primera sería completar algunas **pruebas adicionales de seguridad** que quedaron pendientes, especialmente alrededor del comportamiento del guardrail y de diferentes casos límite.
 
-Una vez revisado el código, agendaremos una llamada de **30–45 minutos**. No es otro examen — es una conversación. Vamos a preguntarte cosas como:
+También implementaría **pruebas end-to-end con Playwright** para validar la aplicación desde el navegador y no solamente probar funciones o endpoints de forma aislada. Esto permitiría comprobar flujos completos de la UI, como escribir y enviar un mensaje, recibir el streaming correctamente, manejar errores, limpiar la conversación y verificar que las funcionalidades principales realmente funcionan desde la perspectiva del usuario.
 
-- "Explícame cómo funciona esta parte de tu código"
-- "¿Por qué usaste este approach y no este otro?"
-- "Si tuvieras que agregar [feature X], ¿cómo lo harías?"
-- "¿Qué parte te resultó más difícil y cómo la resolviste?"
-- "¿Qué cambiarías del diseño si tuvieras que escalar esto?"
+Otra herramienta que me interesa explorar para una siguiente instancia es **Stagehand**, especialmente para experimentar con pruebas y automatización de interfaces apoyadas por inteligencia artificial. No forma parte de la implementación actual; sería una línea de trabajo futura para complementar las pruebas E2E tradicionales.
 
-El objetivo es entender tu proceso de pensamiento, no hacerte tropezar. Si usaste IA para una parte, no hay problema — cuéntanos cómo la usaste y qué aprendiste del resultado.
+También aumentaría la cobertura de las pruebas de las diferentes tools y del endpoint del chat, especialmente en casos límite y escenarios de error.
+
+Finalmente, si el proyecto evolucionara de reto técnico a una aplicación utilizada por usuarios reales, sustituiría la persistencia basada en `localStorage` por una solución de almacenamiento en servidor y añadiría más observabilidad sobre errores, uso de modelos y ejecución de tools.
+
+Estas mejoras reflejan principalmente cosas que no alcancé a implementar dentro del tiempo del reto, más que problemas que hayan impedido que la aplicación cumpliera con su objetivo actual.
