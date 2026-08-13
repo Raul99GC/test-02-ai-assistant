@@ -1,5 +1,11 @@
 # Ritmi — Mentor médico con IA
 
+## Demo
+
+**Demo en vivo:** [https://ritmi-assistant.vercel.app/](https://ritmi-assistant.vercel.app/)
+
+> **Nota sobre la demo:** la versión publicada utiliza modelos de menor tamaño para mantener controlados los costos de la demo. Por ello, ocasionalmente puede haber respuestas incompletas, errores al procesar algún mensaje o comportamientos menos consistentes de lo esperado. Esto está relacionado principalmente con las capacidades del modelo utilizado en la demo y no con la arquitectura de la aplicación. Para un entorno de producción se recomienda utilizar un modelo más robusto, lo cual puede configurarse mediante `OPENROUTER_MODEL_NAME` y `OPENROUTER_SAFETY_MODEL_NAME` sin modificar la arquitectura principal del proyecto.
+
 ## ¿Qué construí?
 
 Construí **Ritmi**, un asistente de IA orientado a funcionar como un **mentor médico para dudas comunes de salud**.
@@ -56,7 +62,6 @@ El proyecto utiliza variables de entorno para mantener las credenciales y la con
 
 La API key de OpenRouter se mantiene del lado del servidor y no se expone al cliente.
 
-> Nota: `OPENROUTER_SAFETY_MODEL_NAME` y `NCBI_API_KEY` deben estar documentadas también en el `.env.example` del proyecto para que el archivo represente todas las variables que utiliza actualmente la aplicación.
 
 ## Diseño del system prompt
 
