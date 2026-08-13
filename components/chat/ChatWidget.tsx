@@ -7,7 +7,7 @@ import { ChatInput } from "./ChatInput";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import toast from "react-hot-toast";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export function ChatWidget() {
 
@@ -21,6 +21,7 @@ export function ChatWidget() {
   });
 
   const isCooldown = status === "submitted" || status === "streaming";
+  const [isMounted, setIsMounted] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -28,11 +29,35 @@ export function ChatWidget() {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  useEffect(() => {
+    setIsMounted(true);
+    const savedMessages = localStorage.getItem("chat_history");
+    if (savedMessages) {
+      try {
+        setMessages(JSON.parse(savedMessages));
+      } catch (error) {
+        console.error("Error al leer el historial", error);
+      }
+    }
+  }, [setMessages]);
+
+  useEffect(() => {
+    if (isMounted && messages.length > 0) {
+      localStorage.setItem("chat_history", JSON.stringify(messages));
+    }
+  }, [messages, isMounted]);
+
+  if (!isMounted) return null; // aqui acuerdate hommie evita errores de hidratación en nextjs
+
+  const resetMessage = () => {
+    localStorage.removeItem("chat_history");
+    setMessages([])
+  }
+
   return (
     <div className="flex h-full w-full max-w-[640px] flex-col overflow-hidden rounded-none bg-white shadow-[0_20px_60px_rgba(30,30,60,0.12)] dark:bg-slate-900 dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] sm:h-auto sm:rounded-[20px]">
-      <ChatHeader onReset={() => setMessages([])} />
+      <ChatHeader onReset={resetMessage} />
 
-      {/* pb extra en mobile para que el último mensaje no quede tapado por el input fixed */}
       <div className="h-full flex-1 overflow-y-auto px-3 py-4 pb-24 sm:h-[560px] sm:flex-none sm:px-5 sm:py-6 sm:pb-6">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
