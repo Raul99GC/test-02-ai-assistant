@@ -13,3 +13,12 @@ export type ContentSafetyResult =
   | { safe: false; reason: string; message: string };
 
 export type MessagePart = { type: string; text?: string };
+
+export type PubMedArticle = {
+  pmid: string;
+  title: string;
+  authors: string[];
+  journal: string;
+  pubDate: string;
+  url: string;
+};
