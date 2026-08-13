@@ -14,7 +14,7 @@ type ChatInputProps = {
   disabled?: boolean;
 };
 
-const MAX_HEIGHT_PX = 160; // ~ equivalente a 1/3 de un chat de altura típica (ajusta a tu layout)
+const MAX_HEIGHT_PX = 160;
 
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
