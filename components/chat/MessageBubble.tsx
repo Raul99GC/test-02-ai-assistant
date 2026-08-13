@@ -36,11 +36,10 @@ export function MessageBubble({ message }: MessageBubbleProps) {
 
       <div className={`group flex max-w-[70%] flex-col ${isUser ? "items-end" : "items-start"}`}>
         <div
-          className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
-            isUser
+          className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed ${isUser
               ? "rounded-br-[4px] bg-indigo-500 text-white"
               : "rounded-bl-[4px] bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-          }`}
+            }`}
         >
           {text}
         </div>
@@ -49,7 +48,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
           <button
             type="button"
             onClick={handleCopy}
-            className="mt-1 flex items-center gap-1 rounded-md px-1.5 py-1 text-slate-400 opacity-0 transition-opacity duration-150 hover:text-slate-600 group-hover:opacity-100 dark:hover:text-slate-300"
+            className="mt-1 flex items-center gap-1 rounded-md px-1.5 py-1 text-slate-400 transition-colors duration-150 hover:text-slate-600 dark:hover:text-slate-300"
             aria-label="Copy message"
           >
             {copied ? (
