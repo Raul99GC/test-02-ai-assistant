@@ -12,14 +12,19 @@ import { checkContentSafety } from "@/lib/content-safety";
 // - Usa un string vacío cuando no hay ningún mensaje del usuario
 // - Toma el último mensaje del usuario cuando hay varios
 // - Retorna el stream del guardrail cuando el contenido no es seguro
-// - Escribe los eventos text-start, text-delta y text-end con el mensaje del
+// - Escribe los eventos text-start, text-delta y text-end con el mensaje del guardrail
 // - No llama a convertToModelMessages cuando el contenido no es seguro
 // - Llama a streamText con el prompt del sistema del mentor y los mensajes convertidos
 // - Construye el modelo usando la variable de entorno OPENROUTER_MODEL_NAME
+// - Pasa el objeto tools a streamText
+// - Pasa stopWhen usando stepCountIs(5) a streamText
+// - Pasa un callback onStepFinish a streamText
+// - onStepFinish registra finishReason, toolCalls y text sin lanzar errores
 // - Retorna la respuesta producida por toUIMessageStreamResponse
 // - Retorna 500 cuando convertToModelMessages lanza un error
 // - Retorna 500 cuando streamText lanza un error
 // - Retorna 500 cuando checkContentSafety rechaza (rejects)
+// - No llama a convertToModelMessages ni streamText cuando checkContentSafety rechaza
 
 
 jest.mock("@/lib/content-safety", () => ({
@@ -34,6 +39,10 @@ jest.mock("@openrouter/ai-sdk-provider", () => ({
   createOpenRouter: jest.fn(() => jest.fn((modelName: string) => ({ modelName }))),
 }));
 
+jest.mock("@/lib/tools", () => ({
+  tools: { __mockTools: true },
+}));
+
 const mockToUIMessageStreamResponse = jest.fn();
 const mockStreamText = jest.fn();
 const mockConvertToModelMessages = jest.fn();
@@ -46,8 +55,8 @@ jest.mock("ai", () => ({
   createUIMessageStream: (...args: any[]) => mockCreateUIMessageStream(...args),
   createUIMessageStreamResponse: (...args: any[]) =>
     mockCreateUIMessageStreamResponse(...args),
+  stepCountIs: (n: number) => ({ __stepCountIs: n }),
 }));
-
 
 const mockedCheckContentSafety = checkContentSafety as jest.MockedFunction<
   typeof checkContentSafety
@@ -381,7 +390,7 @@ describe("POST /api/chat", () => {
       expect(json.error).toBeDefined();
     });
 
-     it("does not call convertToModelMessages when checkContentSafety rejects", async () => {
+    it("does not call convertToModelMessages when checkContentSafety rejects", async () => {
       mockedCheckContentSafety.mockRejectedValue(
         new Error("fallo del servicio de seguridad")
       );
@@ -409,6 +418,74 @@ describe("POST /api/chat", () => {
 
       expect(mockStreamText).not.toHaveBeenCalled();
     });
-    
+
+  });
+
+  describe("tools integration", () => {
+    it("passes the tools object to streamText", async () => {
+      const req = buildRequest({
+        messages: [{ role: "user", content: "cual es mi imc" }],
+      });
+
+      await POST(req);
+
+      expect(mockStreamText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tools: { __mockTools: true },
+        })
+      );
+    });
+
+    it("passes stopWhen using stepCountIs(5) to streamText", async () => {
+      const req = buildRequest({
+        messages: [{ role: "user", content: "algo" }],
+      });
+
+      await POST(req);
+
+      expect(mockStreamText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          stopWhen: { __stepCountIs: 5 },
+        })
+      );
+    });
+
+    it("passes an onStepFinish callback function to streamText", async () => {
+      const req = buildRequest({
+        messages: [{ role: "user", content: "algo" }],
+      });
+
+      await POST(req);
+
+      expect(mockStreamText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          onStepFinish: expect.any(Function),
+        })
+      );
+    });
+
+    it("onStepFinish logs finishReason, toolCalls and text without throwing", async () => {
+      const logSpy = jest.spyOn(console, "log").mockImplementation(() => { });
+
+      const req = buildRequest({
+        messages: [{ role: "user", content: "algo" }],
+      });
+
+      await POST(req);
+
+      const { onStepFinish } = mockStreamText.mock.calls[0][0];
+      const fakeStep = {
+        finishReason: "stop",
+        toolCalls: [{ toolName: "calcularIMC" }],
+        text: "resultado",
+      };
+
+      expect(() => onStepFinish(fakeStep)).not.toThrow();
+      expect(logSpy).toHaveBeenCalledWith("finishReason:", "stop");
+      expect(logSpy).toHaveBeenCalledWith("toolCalls:", fakeStep.toolCalls);
+      expect(logSpy).toHaveBeenCalledWith("text:", "resultado");
+
+      logSpy.mockRestore();
+    });
   });
 });
