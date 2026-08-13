@@ -7,6 +7,7 @@ import { ChatInput } from "./ChatInput";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import toast from "react-hot-toast";
+import { useEffect, useRef } from "react";
 
 export function ChatWidget() {
 
@@ -21,12 +22,18 @@ export function ChatWidget() {
 
   const isCooldown = status === "submitted" || status === "streaming";
 
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   return (
     <div className="flex h-full w-full max-w-[640px] flex-col overflow-hidden rounded-none bg-white shadow-[0_20px_60px_rgba(30,30,60,0.12)] dark:bg-slate-900 dark:shadow-[0_20px_60px_rgba(0,0,0,0.4)] sm:h-auto sm:rounded-[20px]">
       <ChatHeader onReset={() => setMessages([])} />
 
-      {/* Contenedor principal con Scroll */}
-      <div className="h-full flex-1 overflow-y-auto px-3 py-4 sm:h-[560px] sm:flex-none sm:px-5 sm:py-6">
+      {/* pb extra en mobile para que el último mensaje no quede tapado por el input fixed */}
+      <div className="h-full flex-1 overflow-y-auto px-3 py-4 pb-24 sm:h-[560px] sm:flex-none sm:px-5 sm:py-6 sm:pb-6">
         {messages.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
@@ -62,9 +69,12 @@ export function ChatWidget() {
             {isCooldown && <TypingIndicator />}
           </div>
         )}
+        <div ref={bottomRef} />
       </div>
 
-      <ChatInput onSend={sendMessage} disabled={isCooldown} />
+      <div className="fixed inset-x-0 bottom-2 z-10 mx-auto w-full max-w-[640px] px-2 sm:static sm:z-auto sm:mx-0 sm:w-auto sm:px-0 sm:bottom-auto">
+        <ChatInput onSend={sendMessage} disabled={isCooldown} />
+      </div>
     </div>
   );
 }
