@@ -2,155 +2,173 @@ import { checkContentSafety } from '@/lib/content-safety';
 import { generateText } from 'ai';
 
 jest.mock('ai', () => ({
-    generateText: jest.fn(),
+  generateText: jest.fn(),
 }));
 
 jest.mock('@openrouter/ai-sdk-provider', () => ({
-    createOpenRouter: jest.fn(() => jest.fn((modelId: string) => modelId)),
+  createOpenRouter: jest.fn(() => jest.fn((modelId: string) => modelId)),
 }));
 
-jest.mock('@/features/chat/prompts/guardrail', () => ({
-    HEALTH_GUARDRAIL_POLICY: 'Mocked HEALT_GUARDRAIL_POLICY for testing',
+jest.mock('@/lib/prompts/guardrail', () => ({
+  HEALTH_GUARDRAIL_POLICY: 'Mocked HEALTH_GUARDRAIL_POLICY for testing',
 }));
 
-describe("checkContentSafety", () => {
-    const model = "nvidia/nemotron-3.5-content-safety:free";
-    const systemPrompt = "Mocked HEALT_GUARDRAIL_POLICY for testing";
+const mockResponse = (obj: unknown) =>
+  (generateText as jest.Mock).mockResolvedValue({ text: JSON.stringify(obj) });
 
-    beforeEach(() => {
-        jest.clearAllMocks();
+describe('checkContentSafety', () => {
+  const systemPrompt = 'Mocked HEALTH_GUARDRAIL_POLICY for testing';
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('Resultado: mensaje seguro', () => {
+    it('debe devolver safe: true cuando classification es true', async () => {
+      mockResponse({ classification: true, reason: 'topic allowed', message: '' });
+
+      const result = await checkContentSafety('¿Es normal tener dolor de cabeza leve?');
+
+      expect(result).toEqual({ safe: true });
+    });
+  });
+
+  describe('Resultado: mensaje inseguro', () => {
+    it('debe devolver safe: false con reason y message cuando classification es false', async () => {
+      mockResponse({
+        classification: false,
+        reason: 'self-harm content',
+        message: 'No puedo ayudarte con eso, por favor busca ayuda profesional.',
+      });
+
+      const result = await checkContentSafety('¿Cómo puedo hacerme daño?');
+
+      expect(result).toEqual({
+        safe: false,
+        reason: 'self-harm content',
+        message: 'No puedo ayudarte con eso, por favor busca ayuda profesional.',
+      });
+    });
+  });
+
+  describe('Validación de entrada', () => {
+    it('debe lanzar un error si el mensaje está vacío', async () => {
+      await expect(checkContentSafety('')).rejects.toThrow();
+    });
+  });
+
+  describe('Manejo de respuestas inválidas del modelo (fail-safe)', () => {
+    it('debe devolver safe: false si el JSON no es parseable', async () => {
+      (generateText as jest.Mock).mockResolvedValue({ text: 'esto no es json' });
+
+      const result = await checkContentSafety('Hola');
+
+      expect(result.safe).toBe(false);
     });
 
-    describe("Result: safe message", () => {
-        it("should return true if the model returns \"safe\"", async () => {
-            const message = "¿Es normal tener dolor de cabeza leve?";
-            (generateText as jest.Mock).mockResolvedValue({ text: "PASS: safe" });
+    it('debe devolver safe: false si falta el campo classification', async () => {
+      mockResponse({ reason: 'missing classification', message: '' });
 
-            const result = await checkContentSafety(message);
+      const result = await checkContentSafety('Hola');
 
-            expect(result).toBe(true);
-        });
-
-        it("should return true for responses without \":unsafe\"", async () => {
-            const message = "Hola! ¿Cómo estás? 😊👋";
-            (generateText as jest.Mock).mockResolvedValue({ text: "OK: allowed topic" });
-
-            const result = await checkContentSafety(message);
-
-            expect(result).toBe(true);
-        });
+      expect(result.safe).toBe(false);
     });
 
-    describe("Result: unsafe message", () => {
-        it("should return false if the model returns \"unsafe\"", async () => {
-            const message = "¿Cómo puedo hacerme daño?";
-            (generateText as jest.Mock).mockResolvedValue({ text: "FAIL: unsafe" });
+    it('debe devolver safe: false si classification no es boolean', async () => {
+      (generateText as jest.Mock).mockResolvedValue({
+        text: JSON.stringify({ classification: 'SAFE', reason: '', message: '' }),
+      });
 
-            const result = await checkContentSafety(message);
+      const result = await checkContentSafety('Hola');
 
-            expect(result).toBe(false);
-        });
-
-        it("should return false if it contains \":unsafe\" in any format", async () => {
-            const message = "Quiero comprar drogas";
-            (generateText as jest.Mock).mockResolvedValue({ text: "Response: unsafe - topic not allowed" });
-
-            const result = await checkContentSafety(message);
-
-            expect(result).toBe(false);
-        });
-
-        it("should handle uppercase unsafe flag", async () => {
-            const message = "¿Pastillas para adelgazar rápido?";
-            (generateText as jest.Mock).mockResolvedValue({ text: "WARNING: UNsafe" });
-
-            const result = await checkContentSafety(message);
-
-            expect(result).toBe(false);
-        });
+      expect(result.safe).toBe(false);
     });
 
-    describe("Messages with emojis and special characters (passed to model)", () => {
-        it("should pass full emojis to the prompt", async () => {
-            const message = "Hola! ¿Cómo estás? 😊👋";
-            (generateText as jest.Mock).mockResolvedValue({ text: "PASS: safe" });
+    it('debe devolver el fallback seguro cuando el modelo responde con texto corrupto y no parseable (caso real observado)', async () => {
+      // Texto real y defectuoso devuelto por el modelo en producción:
+      // no es JSON válido (backticks sueltos, comillas sin escapar, estructura rota).
+      const textoCorrupto =
+        `[{"analysis":"texto con backticks sueltos y comillas sin escapar ` +
+        '\n\t\t\n' +
+        '???...... "algo" ...\n' +
+        '}]';
 
-            await checkContentSafety(message);
+      (generateText as jest.Mock).mockResolvedValue({ text: textoCorrupto });
 
-            expect(generateText).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    prompt: message,
-                })
-            );
-        });
+      const result = await checkContentSafety('ayudame con algo');
 
-        it("should evaluate unicode messages correctly", async () => {
-            const message = "¿Dolor de cabeza? ⚡️ ™ © ®";
-            (generateText as jest.Mock).mockResolvedValue({ text: "PASS: safe" });
-
-            const result = await checkContentSafety(message);
-
-            expect(result).toBe(true);
-        });
+      expect(result).toEqual({
+        safe: false,
+        reason: 'guardrail_parse_error',
+        message: 'No puedo procesar tu mensaje en este momento, intenta de nuevo.',
+      });
     });
 
-    describe("Verification of generateText arguments", () => {
-        it("should call generateText with the correct model", async () => {
-            const message = "Tengo gripe";
-            (generateText as jest.Mock).mockResolvedValue({ text: "PASS: safe" });
+    it('debe devolver safe: true cuando el modelo envuelve la respuesta válida en un array (caso real observado)', async () => {
+      // Caso real observado: el modelo a veces devuelve un JSON válido pero
+      // envuelto en [] en vez del objeto plano esperado. Se verificó contra la
+      // implementación real que este caso SÍ se resuelve correctamente a safe: true.
+      const textoEnArray =
+        '[{\n' +
+        '  "classification": true,\n' +
+        '  "reason": "User greeted with a simple hello.",\n' +
+        '  "message": ""\n' +
+        '}]';
 
-            await checkContentSafety(message);
+      (generateText as jest.Mock).mockResolvedValue({ text: textoEnArray });
 
-            expect(generateText).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    model: model,
-                })
-            );
-        });
+      const result = await checkContentSafety('hola');
 
-        it("should use HEALTH_GUARDRAIL_POLICY as system prompt", async () => {
-            const message = "Tengo fiebre";
-            (generateText as jest.Mock).mockResolvedValue({ text: "PASS: safe" });
+      expect(result).toEqual({ safe: true });
+    });
+  });
 
-            await checkContentSafety(message);
+  describe('Mensajes con emojis y caracteres especiales', () => {
+    it('debe pasar el mensaje completo con emojis al prompt', async () => {
+      mockResponse({ classification: true, reason: 'ok', message: '' });
 
-            expect(generateText).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    system: systemPrompt,
-                })
-            );
-        });
+      await checkContentSafety('Hola! ¿Cómo estás? 😊👋');
 
-        it("should pass the user message as prompt", async () => {
-            const message = "¿Qué medicamento es bueno para el resfriado?";
-            (generateText as jest.Mock).mockResolvedValue({ text: "PASS: safe" });
+      expect(generateText).toHaveBeenCalledWith(
+        expect.objectContaining({ prompt: 'Hola! ¿Cómo estás? 😊👋' })
+      );
+    });
+  });
 
-            await checkContentSafety(message);
+  describe('Verificación de argumentos de generateText', () => {
+    it('debe usar HEALTH_GUARDRAIL_POLICY como system prompt', async () => {
+      mockResponse({ classification: true, reason: 'ok', message: '' });
 
-            expect(generateText).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    prompt: message,
-                })
-            );
-        });
+      await checkContentSafety('Tengo fiebre');
+
+      expect(generateText).toHaveBeenCalledWith(
+        expect.objectContaining({ system: systemPrompt })
+      );
     });
 
-    describe("Errors", () => {
-        it("should propagate errors if generateText fails", async () => {
-            const message = "Hola";
-            const error = new Error("OpenRouter API is down");
-            (generateText as jest.Mock).mockRejectedValue(error);
+    it('debe pedir response_format json_object', async () => {
+      mockResponse({ classification: true, reason: 'ok', message: '' });
 
-            await expect(checkContentSafety(message)).rejects.toThrow("OpenRouter API is down");
-        });
+      await checkContentSafety('Tengo fiebre');
 
-        it("should return true if response does not contain \":unsafe\"", async () => {
-            const message = "Tengo fiebre";
-            (generateText as jest.Mock).mockResolvedValue({ text: "No unsafe content detected" });
-
-            const result = await checkContentSafety(message);
-
-            expect(result).toBe(true);
-        });
+      expect(generateText).toHaveBeenCalledWith(
+        expect.objectContaining({
+          providerOptions: expect.objectContaining({
+            openrouter: expect.objectContaining({
+              response_format: { type: 'json_object' },
+            }),
+          }),
+        })
+      );
     });
+  });
+
+  describe('Errores', () => {
+    it('debe propagar el error si generateText falla', async () => {
+      const error = new Error('OpenRouter API is down');
+      (generateText as jest.Mock).mockRejectedValue(error);
+
+      await expect(checkContentSafety('Hola')).rejects.toThrow('OpenRouter API is down');
+    });
+  });
 });
