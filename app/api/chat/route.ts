@@ -5,11 +5,13 @@ import {
 	createUIMessageStream,
 	createUIMessageStreamResponse,
 	type UIMessage,
+	stepCountIs,
 } from "ai";
 import { z } from "zod";
 import { checkContentSafety } from "@/lib/content-safety";
 import { MEDICAL_MENTOR_PROMPT } from "@/lib/prompts/mentor";
 import { MessagePart } from "@/lib/types";
+import { tools } from "@/lib/tools";
 
 const openrouter = createOpenRouter({
 	apiKey: process.env.OPENROUTER_API_KEY,
@@ -91,6 +93,13 @@ export async function POST(req: Request) {
 			model: openrouter(process.env.OPENROUTER_MODEL_NAME!),
 			system: MEDICAL_MENTOR_PROMPT,
 			messages: modelMessages,
+			tools,
+			stopWhen: stepCountIs(5),
+			onStepFinish: (step) => {
+				console.log("finishReason:", step.finishReason);
+				console.log("toolCalls:", step.toolCalls);
+				console.log("text:", step.text);
+			},
 		});
 
 		return result.toUIMessageStreamResponse();
