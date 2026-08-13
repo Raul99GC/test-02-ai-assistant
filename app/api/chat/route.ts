@@ -67,7 +67,17 @@ export async function POST(req: Request) {
 		lastUserMessage?.content ??
 		"";
 
-	const safety = await checkContentSafety(lastUserText);
+	let safety;
+	try {
+		safety = await checkContentSafety(lastUserText);
+	} catch (error) {
+		return new Response(
+			JSON.stringify({
+				error: "No se pudo validar el mensaje en este momento, intenta de nuevo.",
+			}),
+			{ status: 500 }
+		);
+	}
 
 	if (!safety.safe) {
 		return streamGuardrailMessage(safety.message);
