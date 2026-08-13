@@ -2,6 +2,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { useRef } from "react";
 
 const chatSchema = z.object({
   message: z.string().trim().min(1, { message: "Debes escribir un mensaje para enviarlo" }),
@@ -13,7 +14,11 @@ type ChatInputProps = {
   disabled?: boolean;
 };
 
+const MAX_HEIGHT_PX = 160; // ~ equivalente a 1/3 de un chat de altura típica (ajusta a tu layout)
+
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -24,13 +29,27 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
     mode: "onChange",
   });
 
+  const { ref: registerRef, ...rest } = register("message");
+
+  const resizeTextarea = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, MAX_HEIGHT_PX)}px`;
+  };
+
   const onSubmit = async (data: ChatFormValues) => {
     if (disabled) return;
     onSend({ text: data.message });
     reset();
+    requestAnimationFrame(() => {
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
+    });
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       if (isValid && !disabled) {
@@ -42,15 +61,25 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   return (
     <form
       onSubmit={handleSubmit(onSubmit)}
-      className="flex items-center gap-2.5 border-t border-slate-100 px-5 py-3.5 dark:border-slate-800"
+      className="flex items-end gap-2.5 border-t border-slate-100 px-5 py-3.5 dark:border-slate-800"
     >
       <div className="flex-1">
-        <input
-          type="text"
+        <textarea
           placeholder="Escribe un mensaje..."
-          {...register("message")}
+          rows={1}
+          {...rest}
+          ref={(el) => {
+            registerRef(el);
+            textareaRef.current = el;
+          }}
           onKeyDown={handleKeyDown}
-          className={"w-full"}
+          onInput={resizeTextarea}
+          onChange={(e) => {
+            rest.onChange(e);
+            resizeTextarea();
+          }}
+          style={{ maxHeight: MAX_HEIGHT_PX }}
+          className="w-full resize-none overflow-y-auto leading-relaxed"
           disabled={isSubmitting || disabled}
           autoComplete="off"
         />
