@@ -1,9 +1,14 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { streamText, convertToModelMessages, type UIMessage } from "ai";
+import {
+	streamText,
+	convertToModelMessages,
+	createUIMessageStream,
+	createUIMessageStreamResponse,
+	type UIMessage,
+} from "ai";
 import { z } from "zod";
 import { checkContentSafety } from "@/lib/content-safety";
 import { MEDICAL_MENTOR_PROMPT } from "@/lib/prompts/mentor";
-
 
 const openrouter = createOpenRouter({
 	apiKey: process.env.OPENROUTER_API_KEY,
@@ -20,6 +25,18 @@ const bodySchema = z.object({
 	messages: z.array(uiMessageSchema).min(1, "messages no puede estar vacío"),
 });
 
+function streamGuardrailMessage(text: string) {
+	const stream = createUIMessageStream({
+		execute: async ({ writer }) => {
+			writer.write({ type: "text-start", id: "guardrail" });
+			writer.write({ type: "text-delta", id: "guardrail", delta: text });
+			writer.write({ type: "text-end", id: "guardrail" });
+		},
+	});
+
+	return createUIMessageStreamResponse({ stream });
+}
+
 export async function POST(req: Request) {
 	let body: unknown;
 
@@ -30,6 +47,7 @@ export async function POST(req: Request) {
 			status: 400,
 		});
 	}
+
 	const parsed = bodySchema.safeParse(body);
 
 	if (!parsed.success) {
@@ -41,18 +59,18 @@ export async function POST(req: Request) {
 	const { messages } = parsed.data;
 
 	const lastUserMessage = messages.filter((m) => m.role === "user").at(-1);
-	const lastUserText = lastUserMessage?.parts
-		?.filter((p: any) => p.type === "text")
-		.map((p: any) => p.text)
-		.join(" ") ?? lastUserMessage?.content ?? "";
+	const lastUserText =
+		lastUserMessage?.parts
+			?.filter((p: any) => p.type === "text")
+			.map((p: any) => p.text)
+			.join(" ") ??
+		lastUserMessage?.content ??
+		"";
 
-	const isSafe = await checkContentSafety(lastUserText);
+	const safety = await checkContentSafety(lastUserText);
 
-	if (!isSafe) {
-		return new Response(
-			JSON.stringify({ error: "El mensaje no cumple con las políticas de contenido" }),
-			{ status: 400 }
-		);
+	if (!safety.safe) {
+		return streamGuardrailMessage(safety.message);
 	}
 
 	try {
