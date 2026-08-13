@@ -27,7 +27,7 @@ export function MessageBubble({ message }: MessageBubbleProps) {
             : "rounded-bl-[4px] bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
         }`}
       >
-        {text} {"<- :o"}
+        {text}
       </div>
 
       {isUser && (
